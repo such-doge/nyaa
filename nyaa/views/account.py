@@ -182,6 +182,7 @@ def profile():
         user = flask.g.user
         new_email = form.email.data.strip()
         new_password = form.new_password.data
+        hide_comments = form.hide_comments.data
 
         if new_email:
             # enforce password check on email change too
@@ -200,12 +201,15 @@ def profile():
             user.password_hash = form.new_password.data
             flask.flash(flask.Markup(
                 '<strong>Password successfully changed!</strong>'), 'success')
+        if hide_comments:
 
+            return flask.redirect('/profile')
         db.session.add(user)
         db.session.commit()
 
         flask.g.user = user
         return flask.redirect('/profile')
+
 
     return flask.render_template('profile.html', form=form)
 

@@ -79,6 +79,17 @@
             </div>
         </form>
     </div>
+        <div class="tab-pane fade" role="tabpanel" id="preferences-change" aria-labelledby="preferences-change-tab">
+            <form method="POST">
+               {{ form.csrf_token }}
+                <div class="row">
+                    <div class="form-group col-md-4">
+                       {{ render_field(form.hide_comments, class_='form-control') }}
+                    </div>
+                </div>
+            </form>
+        </div>
+
 </div>
 
 <hr>

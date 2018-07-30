@@ -165,6 +165,8 @@ class ProfileForm(FlaskForm):
 
     password_confirm = PasswordField('Repeat New Password')
 
+    hide_comments = BooleanField('Hide torrent comments')
+
 
 # Classes for a SelectField that can be set to disable options (id, name, disabled)
 # TODO: Move to another file for cleaner look

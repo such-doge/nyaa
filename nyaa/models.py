@@ -497,6 +497,7 @@ class User(db.Model):
     sukebei_comments = db.relationship('SukebeiComment', back_populates='user', lazy='dynamic')
 
     bans = db.relationship('Ban', uselist=True, foreign_keys='Ban.user_id')
+    preferences = db.relationship('UserPreferences', foreign_keys='UserPreferences.user_id')
 
     def __init__(self, username, email, password):
         self.username = username
