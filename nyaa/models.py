@@ -641,6 +641,18 @@ class User(db.Model):
         return (self.created_time - UTC_EPOCH).total_seconds()
 
 
+class UserPreferences(db.Model):
+    __tablename__ = 'user_preferences'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+
+    hide_comments = db.Column(db.Boolean, default=False, nullable=False)
+
+    @property
+    def hides_comments(self):
+        return self.hide_comments
+
 class AdminLogBase(DeclarativeHelperBase):
     __tablename_base__ = 'adminlog'
 
