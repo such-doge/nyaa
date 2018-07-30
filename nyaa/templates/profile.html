@@ -25,6 +25,9 @@
     <li role="presentation">
         <a href="#email-change" id="email-change-tab" role="tab" data-toggle="tab" aria-controls="profile" aria-expanded="false">Email</a>
     </li>
+    <li role="presentation">
+        <a href="#preferences-change" id="preferences-change-tab" role="tab" data-toggle="tab" aria-controls="profile" aria-expanded="false">Preferences</a>
+    </li>
 </ul>
 
 <div class="tab-content">
@@ -79,21 +82,21 @@
             </div>
         </form>
     </div>
-        <div class="tab-pane fade" role="tabpanel" id="preferences-change" aria-labelledby="preferences-change-tab">
-            <form method="POST">
-               {{ form.csrf_token }}
-                <div class="row">
-                    <div class="form-group col-md-4">
-                       {{ render_field(form.hide_comments, class_='form-control') }}
-                    </div>
+    <div class="tab-pane fade" role="tabpanel" id="preferences-change" aria-labelledby="preferences-change-tab">
+        <form method="POST">
+           {{ form.csrf_token }}
+            <div class="row">
+                <div class="form-group col-md-4">
+                   {{ render_field(form.hide_comments, class_='form-control') }}
                 </div>
-                <div class="row">
-                    <div class="row-md-4">
-                        <input type="submit" value="Update" class="btn btn-primary">
-                    </div>
+            </div>
+            <div class="row">
+                <div class="row-md-4">
+                    <input type="submit" value="Update" class="btn btn-primary">
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
+    </div>
 
 </div>
 
