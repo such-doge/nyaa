@@ -90,7 +90,17 @@ def register():
         user.last_login_ip = user.registration_ip
         db.session.add(user)
         db.session.commit()
-        if models.RangeBan.is_rangebanned(user.registration_ip):
+
+        if app.config['RAID_MODE_LIMIT_REGISTER']:
+            flask.flash(flask.Markup(app.config['RAID_MODE_REGISTER_MESSAGE'] + ' '
+                                     'Please <a href="{}">ask a moderator</a> to manually '
+                                     'activate your account <a href="{}">\'{}\'</a>.'
+                                     .format(flask.url_for('site.help') + '#irchelp',
+                                             flask.url_for('users.view_user',
+                                                           user_name=user.username),
+                                             user.username)), 'warning')
+
+        elif models.RangeBan.is_rangebanned(user.registration_ip):
             flask.flash(flask.Markup('Your IP is blocked from creating new accounts. '
                                      'Please <a href="{}">ask a moderator</a> to manually '
                                      'activate your account <a href="{}">\'{}\'</a>.'
@@ -178,47 +188,68 @@ def profile():
 
     form = forms.ProfileForm(flask.request.form)
 
-    if flask.request.method == 'POST' and form.validate():
-        user = flask.g.user
-        new_email = form.email.data.strip()
-        new_password = form.new_password.data
+    if flask.request.method == 'POST':
+        if form.authorized_submit and form.validate():
+            user = flask.g.user
+            new_email = form.email.data.strip()
+            new_password = form.new_password.data
 
-        if new_email:
-            # enforce password check on email change too
-            if form.current_password.data != user.password_hash:
+            if new_email:
+                if form.current_password.data != user.password_hash:
+                    flask.flash(flask.Markup(
+                        '<strong>Email change failed!</strong> Incorrect password.'), 'danger')
+                    return flask.redirect('/profile')
+                user.email = form.email.data
                 flask.flash(flask.Markup(
-                    '<strong>Email change failed!</strong> Incorrect password.'), 'danger')
-                return flask.redirect('/profile')
-            user.email = form.email.data
-            flask.flash(flask.Markup(
-                '<strong>Email successfully changed!</strong>'), 'success')
-        if new_password:
-            if form.current_password.data != user.password_hash:
+                    '<strong>Email successfully changed!</strong>'), 'success')
+
+            if new_password:
+                if form.current_password.data != user.password_hash:
+                    flask.flash(flask.Markup(
+                        '<strong>Password change failed!</strong> Incorrect password.'), 'danger')
+                    return flask.redirect('/profile')
+                user.password_hash = form.new_password.data
                 flask.flash(flask.Markup(
-                    '<strong>Password change failed!</strong> Incorrect password.'), 'danger')
-                return flask.redirect('/profile')
-            user.password_hash = form.new_password.data
+                    '<strong>Password successfully changed!</strong>'), 'success')
+            db.session.add(user)
+            db.session.commit()
+            flask.g.user = user
+            return flask.redirect('/profile')
+
+        elif form.submit_settings:
+            user = flask.g.user
+            if user.preferences is None:
+                preferences = models.UserPreferences(user.id)
+                db.session.add(preferences)
+                db.session.commit()
+            user.preferences.hide_comments = form.hide_comments.data
             flask.flash(flask.Markup(
-                '<strong>Password successfully changed!</strong>'), 'success')
-
-        db.session.add(user)
-        db.session.commit()
-
-        flask.g.user = user
-        return flask.redirect('/profile')
+                '<strong>Preferences successfully changed!</strong>'), 'success')
+            db.session.add(user)
+            db.session.commit()
+            flask.g.user = user
+            return flask.redirect('/profile')
 
     return flask.render_template('profile.html', form=form)
 
 
 def redirect_url():
-    home_url = flask.url_for('main.home')
+    next_url = flask.request.args.get('next', '')
+    referrer = flask.request.referrer or ''
 
-    url = flask.request.args.get('next') or \
-        flask.request.referrer or \
-        home_url
-    if url == flask.request.url:
-        return home_url
-    return url
+    target_url = (
+        # Use ?next= param if it's a local (/foo/bar) path
+        (next_url.startswith('/') and next_url) or
+        # Use referrer if it's on our own host
+        (referrer.startswith(flask.request.host_url) and referrer)
+    )
+
+    # Return the target, avoiding infinite loops
+    if target_url and target_url != flask.request.url:
+        return target_url
+
+    # Default to index
+    return flask.url_for('main.home')
 
 
 def send_verification_email(user):

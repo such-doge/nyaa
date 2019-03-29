@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime, timedelta
 from ipaddress import ip_address
 
@@ -13,6 +14,29 @@ from nyaa import models, utils
 from nyaa.extensions import db
 
 app = flask.current_app
+
+# Blacklists for _validate_torrent_filenames
+# TODO: consider moving to config.py?
+CHARACTER_BLACKLIST = [
+    '\u202E',  # RIGHT-TO-LEFT OVERRIDE
+]
+FILENAME_BLACKLIST = [
+    # Windows reserved filenames
+    'con',
+    'nul',
+    'prn',
+    'aux',
+    'com0', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9',
+    'lpt0', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9',
+]
+
+# Invalid RSS characters regex, used to sanitize some strings
+ILLEGAL_XML_CHARS_RE = re.compile(u'[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
+
+
+def sanitize_string(string, replacement='\uFFFD'):
+    ''' Simply replaces characters based on a regex '''
+    return ILLEGAL_XML_CHARS_RE.sub(replacement, string)
 
 
 class TorrentExtraValidationException(Exception):
@@ -62,16 +86,14 @@ def _recursive_dict_iterator(source):
 
 
 def _validate_torrent_filenames(torrent):
-    ''' Checks path parts of a torrent's filetree against blacklisted characters,
-        returning False on rejection '''
-    # TODO Move to config.py
-    character_blacklist = [
-        '\u202E',  # RIGHT-TO-LEFT OVERRIDE
-    ]
+    ''' Checks path parts of a torrent's filetree against blacklisted characters
+        and filenames, returning False on rejection '''
     file_tree = json.loads(torrent.filelist.filelist_blob.decode('utf-8'))
 
     for path_part, value in _recursive_dict_iterator(file_tree):
-        if any(True for c in character_blacklist if c in path_part):
+        if path_part.rsplit('.', 1)[0].lower() in FILENAME_BLACKLIST:
+            return False
+        if any(True for c in CHARACTER_BLACKLIST if c in path_part):
             return False
 
     return True
@@ -159,7 +181,11 @@ def handle_torrent_upload(upload_form, uploading_user=None, fromAPI=False):
             raise TorrentExtraValidationException()
 
     if not uploading_user:
-        if models.RangeBan.is_rangebanned(ip_address(flask.request.remote_addr).packed):
+        if app.config['RAID_MODE_LIMIT_UPLOADS']:
+            # XXX TODO: rename rangebanned to something more generic
+            upload_form.rangebanned.errors = [app.config['RAID_MODE_UPLOADS_MESSAGE']]
+            raise TorrentExtraValidationException()
+        elif models.RangeBan.is_rangebanned(ip_address(flask.request.remote_addr).packed):
             upload_form.rangebanned.errors = ["Your IP is banned from "
                                               "uploading anonymously."]
             raise TorrentExtraValidationException()
@@ -182,6 +208,11 @@ def handle_torrent_upload(upload_form, uploading_user=None, fromAPI=False):
     display_name = upload_form.display_name.data.strip() or info_dict['name'].decode('utf8').strip()
     information = (upload_form.information.data or '').strip()
     description = (upload_form.description.data or '').strip()
+
+    # Sanitize fields
+    display_name = sanitize_string(display_name)
+    information = sanitize_string(information)
+    description = sanitize_string(description)
 
     torrent_filesize = info_dict.get('length') or sum(
         f['length'] for f in info_dict.get('files'))

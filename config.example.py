@@ -14,6 +14,16 @@ MAINTENANCE_MODE_MESSAGE = 'Site is currently in read-only maintenance mode.'
 # Allow logging in during maintenance (without updating last login date)
 MAINTENANCE_MODE_LOGINS = True
 
+# Block *anonymous* uploads completely
+RAID_MODE_LIMIT_UPLOADS = False
+# Message prepended to the full error message (account.py)
+RAID_MODE_UPLOADS_MESSAGE = 'Anonymous uploads are currently disabled.'
+
+# Require manual activation for newly registered accounts
+RAID_MODE_LIMIT_REGISTER = False
+# Message prepended to the full error message (account.py)
+RAID_MODE_REGISTER_MESSAGE = 'Registration is currently being limited.'
+
 #############
 ## General ##
 #############
@@ -59,6 +69,11 @@ EMAIL_BLACKLIST = (
     re.compile(r'(?i)@(msn\.com|passport\.(com|net))'),
     # '@dodgydomain.tk'
 )
+EMAIL_SERVER_BLACKLIST = (
+    # Bad mailserver IPs here (MX server.com -> A mail.server.com > 11.22.33.44)
+    # '1.2.3.4', '11.22.33.44'
+)
+
 
 
 # Recaptcha keys (https://www.google.com/recaptcha)
