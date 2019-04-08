@@ -64,7 +64,7 @@ EMAIL_BLACKLIST = (
     # so it's less of a headache to blacklist them as users can't receive the mails anyway.
     # (Hopefully) complete list of Microsoft email domains follows:
     re.compile(r'(?i)@hotmail\.(co|co\.uk|com|de|dk|eu|fr|it|net|org|se)'),
-    re.compile(r'(?i)@live\.(co|co.uk|com|de|dk|eu|fr|it|net|org|se)'),
+    re.compile(r'(?i)@live\.(co|co.uk|com|de|dk|eu|fr|it|net|org|se|no)'),
     re.compile(r'(?i)@outlook\.(at|be|cl|co|co\.(id|il|nz|th)|com|com\.(ar|au|au|br|gr|pe|tr|vn)|cz|de|de|dk|dk|es|eu|fr|fr|hu|ie|in|it|it|jp|kr|lv|my|org|ph|pt|sa|se|sg|sk)'),
     re.compile(r'(?i)@(msn\.com|passport\.(com|net))'),
     # '@dodgydomain.tk'
@@ -148,6 +148,9 @@ BACKUP_TORRENT_FOLDER = 'torrents'
 
 # How many results should a page contain. Applies to RSS as well.
 RESULTS_PER_PAGE = 75
+
+# How many pages we'll return at most
+MAX_PAGES = 100
 
 # Use better searching with ElasticSearch
 # See README.MD on setup!

@@ -8,8 +8,14 @@ from flask_assets import Bundle  # noqa F401
 from nyaa.api_handler import api_blueprint
 from nyaa.extensions import assets, cache, db, fix_paginate, toolbar
 from nyaa.template_utils import bp as template_utils_bp
+from nyaa.template_utils import caching_url_for
 from nyaa.utils import random_string
 from nyaa.views import register_views
+
+# Replace the Flask url_for with our cached version, since there's no real harm in doing so
+# (caching_url_for has stored a reference to the OG url_for, so we won't recurse)
+# Touching globals like this is a bit dirty, but nicer than replacing every url_for usage
+flask.url_for = caching_url_for
 
 
 def create_app(config):
@@ -32,6 +38,19 @@ def create_app(config):
             request.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
             request.headers['Pragma'] = 'no-cache'
             request.headers['Expires'] = '0'
+            return request
+
+        # Add a timer header to the requests when debugging
+        # This gives us a simple way to benchmark requests off-app
+        import time
+
+        @app.before_request
+        def timer_before_request():
+            flask.g.request_start_time = time.time()
+
+        @app.after_request
+        def timer_after_request(request):
+            request.headers['X-Timer'] = time.time() - flask.g.request_start_time
             return request
 
     else:
@@ -72,6 +91,10 @@ def create_app(config):
     app.jinja_env.add_extension('jinja2.ext.do')
     app.jinja_env.lstrip_blocks = True
     app.jinja_env.trim_blocks = True
+
+    # The default jinja_env has the OG Flask url_for (from before we replaced it),
+    # so update the globals with our version
+    app.jinja_env.globals['url_for'] = flask.url_for
 
     # Database
     fix_paginate()  # This has to be before the database is initialized

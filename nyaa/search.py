@@ -372,6 +372,12 @@ def search_db(term='', user=None, sort='id', order='desc', category='0_0',
     if page > 4294967295:
         flask.abort(404)
 
+    MAX_PAGES = app.config.get("MAX_PAGES", 0)
+
+    if MAX_PAGES and page > MAX_PAGES:
+        flask.abort(flask.Response("You've exceeded the maximum number of pages. Please "
+                                   "make your search query less broad.", 403))
+
     sort_keys = {
         'id': models.Torrent.id,
         'size': models.Torrent.filesize,
@@ -505,7 +511,6 @@ def search_db(term='', user=None, sort='id', order='desc', category='0_0',
             if len(item) >= 2:
                 qpc.filter(FullTextSearch(
                     item, models.TorrentNameSearch, FullTextMode.NATURAL))
-
     query, count_query = qpc.items
     # Sort and order
     if sort_column.class_ != models.Torrent:
@@ -518,6 +523,7 @@ def search_db(term='', user=None, sort='id', order='desc', category='0_0',
     if rss:
         query = query.limit(per_page)
     else:
-        query = query.paginate_faste(page, per_page=per_page, step=5, count_query=count_query)
+        query = query.paginate_faste(page, per_page=per_page, step=5, count_query=count_query,
+                                     max_page=MAX_PAGES)
 
     return query
